@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>五十音表</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #50E3C2;
+            --wrong: #e74c3c;
+            --correct: #2ecc71;
+            --bg: #F4F7F6;
+            --text: #333;
+            --card-bg: #fff;
+            --gold: #FFD700;
+            --silver: #C0C0C0;
+            --bronze: #CD7F32;
+            --mark-color: #fff9c4;
+            --mark-border: #fbc02d;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+        
+        /* Header */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            position: relative; 
+        }
+        
+        .header-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .header-btn:active { background: rgba(255,255,255,0.4); }
+
+        #app-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 130px; 
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Components */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            width: 100%;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .game-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-btn { height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .game-icon { font-size: 2rem; margin-bottom: 5px; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; width: 95%; max-height: 90%; border-radius: 15px;
+            padding: 20px; overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .config-section { margin-bottom: 20px; text-align: left; }
+        .config-title { 
+            font-weight: bold; color: #333; margin-bottom: 10px; font-size: 1rem; 
+            background: #f0f0f0; padding: 5px 10px; border-radius: 5px;
+        }
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        
+        .config-item {
+            border: 1px solid #ddd; border-radius: 8px; padding: 10px 2px;
+            text-align: center; cursor: pointer; color: #666; font-size: 0.9rem;
+            background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .config-item.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .config-hira { font-size: 1rem; font-weight: bold; }
+        
+        .action-row { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .action-row .btn-outline { flex: 1; font-size: 0.8rem; padding: 8px 0; margin: 0; min-width: 45%; }
+
+        /* Kana Grid */
+        .kana-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .kana-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .kana-section-title { font-weight: 700; color: #555; margin: 18px 0 8px; padding-left: 2px; }
+        .kana-section-title:first-child { margin-top: 0; }
+        .kana-cell { aspect-ratio: 1; background: white; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid #eee; cursor: pointer; }
+        .kana-cell:active { background: #f0f0f0; }
+        .kana-empty { background: transparent; border: none; cursor: default; } 
+        .kana-main { font-size: 1.4rem; font-weight: bold; color: #333; }
+        .kana-sub { font-size: 0.65rem; line-height: 1.25; color: #777; margin-top: 2px; }
+
+        /* Game & Misc */
+        .order-info-bar { position: sticky; top: 0; background: rgba(255,255,255,0.95); padding: 10px; z-index: 99; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .order-item { aspect-ratio: 1; background: white; border: 2px solid #eee; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .order-item.hidden { opacity: 0; pointer-events: none; }
+        .order-item.marked { background-color: var(--mark-color) !important; border-color: var(--mark-border) !important; transform: scale(0.95); }
+        .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .choice-btn { height: 80px; font-size: 1.5rem; background: white; border: 2px solid #eee; border-radius: 10px; }
+        .mistake-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 15px 0; }
+        .mistake-tag { background: #ffebee; color: #c0392b; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; border: 1px solid #ef9a9a; }
+        .correct-anim { background-color: var(--correct) !important; color: white; border-color: var(--correct); }
+        .wrong-anim { background-color: var(--wrong) !important; color: white; animation: shake 0.4s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 20; flex-shrink: 0; }
+        .tab-item { text-align: center; font-size: 0.76rem; color: #999; flex: 1; min-width: 0; cursor: pointer; overflow: hidden; }
+        .tab-item.active { color: var(--primary); font-weight: bold; }
+        .tab-icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+
+        .kana-toolbar { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px; }
+        .kana-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; flex: 1; min-width: 0; }
+        .kana-nav-btn { padding: 6px 12px; background: #ddd; border-radius: 20px; font-size: 0.9rem; white-space: nowrap; cursor: pointer; border: none; color: #555; }
+        .kana-nav-btn.active { background: var(--primary); color: white; }
+        .mode-switch { display: flex; justify-content: center; margin-bottom: 20px; background: #e0e0e0; border-radius: 10px; padding: 4px; }
+        .mode-btn { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; color: #666; }
+        .mode-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .sound-toggle {
+            width: auto;
+            flex: 0 0 auto;
+            margin: 0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .sound-toggle.off { background: #ddd; color: #555; }
+        .rank-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .rank-table th { text-align: left; color: #888; font-size: 0.8rem; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+        .rank-table td { padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.95rem; }
+        .rank-1 { color: var(--gold); font-weight: bold; } .rank-2 { color: var(--silver); font-weight: bold; } .rank-3 { color: var(--bronze); font-weight: bold; }
+        .input-name { width: 60%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 1rem; margin-right: 5px;}
+        .tab-item { text-decoration: none; }
+        .home-grid {
+            display: grid;
+            gap: 14px;
+        }
+        .home-link-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: var(--text);
+            text-align: left;
+        }
+        .home-link-card > div:last-child { min-width: 0; }
+        .home-link-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            font-size: 1.6rem;
+            flex: 0 0 auto;
+        }
+        .home-link-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+        .home-link-desc {
+            color: #777;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span id="header-title">五十音表</span>
+    <button id="config-btn" class="header-btn" style="display:none;" onclick="toggleConfigModal()">⚙️ 設定</button>
+</header>
+
+<main id="app-container"></main>
+
+<nav class="tab-bar">
+    <a class="tab-item" href="vocabulary.html">
+        <span class="tab-icon">📚</span>單字表
+    </a>
+    <a class="tab-item" href="quiz-challenge.html">
+        <span class="tab-icon">🎮</span>測驗挑戰
+    </a>
+    <a class="tab-item active" href="kana-chart.html">
+        <span class="tab-icon">あ</span>五十音表
+    </a>
+</nav>
+
+
+
+<script>
+const KANA_DB = [
+    { h: 'あ', k: 'ア', r: 'a', cat: 'seion' }, { h: 'い', k: 'イ', r: 'i', cat: 'seion' }, { h: 'う', k: 'ウ', r: 'u', cat: 'seion' }, { h: 'え', k: 'エ', r: 'e', cat: 'seion' }, { h: 'お', k: 'オ', r: 'o', cat: 'seion' },
+    { h: 'か', k: 'カ', r: 'ka', cat: 'seion' }, { h: 'き', k: 'キ', r: 'ki', cat: 'seion' }, { h: 'く', k: 'ク', r: 'ku', cat: 'seion' }, { h: 'け', k: 'ケ', r: 'ke', cat: 'seion' }, { h: 'こ', k: 'コ', r: 'ko', cat: 'seion' },
+    { h: 'さ', k: 'サ', r: 'sa', cat: 'seion' }, { h: 'し', k: 'シ', r: 'shi', cat: 'seion' }, { h: 'す', k: 'ス', r: 'su', cat: 'seion' }, { h: 'せ', k: 'セ', r: 'se', cat: 'seion' }, { h: 'そ', k: 'ソ', r: 'so', cat: 'seion' },
+    { h: 'た', k: 'タ', r: 'ta', cat: 'seion' }, { h: 'ち', k: 'チ', r: 'chi', cat: 'seion' }, { h: 'つ', k: 'ツ', r: 'tsu', cat: 'seion' }, { h: 'て', k: 'テ', r: 'te', cat: 'seion' }, { h: 'と', k: 'ト', r: 'to', cat: 'seion' },
+    { h: 'な', k: 'ナ', r: 'na', cat: 'seion' }, { h: 'に', k: 'ニ', r: 'ni', cat: 'seion' }, { h: 'ぬ', k: 'ヌ', r: 'nu', cat: 'seion' }, { h: 'ね', k: 'ネ', r: 'ne', cat: 'seion' }, { h: 'の', k: 'ノ', r: 'no', cat: 'seion' },
+    { h: 'は', k: 'ハ', r: 'ha', cat: 'seion' }, { h: 'ひ', k: 'ヒ', r: 'hi', cat: 'seion' }, { h: 'ふ', k: 'フ', r: 'fu', cat: 'seion' }, { h: 'へ', k: 'ヘ', r: 'he', cat: 'seion' }, { h: 'ほ', k: 'ホ', r: 'ho', cat: 'seion' },
+    { h: 'ま', k: 'マ', r: 'ma', cat: 'seion' }, { h: 'み', k: 'ミ', r: 'mi', cat: 'seion' }, { h: 'む', k: 'ム', r: 'mu', cat: 'seion' }, { h: 'め', k: 'メ', r: 'me', cat: 'seion' }, { h: 'も', k: 'モ', r: 'mo', cat: 'seion' },
+    { h: 'や', k: 'ヤ', r: 'ya', cat: 'seion' }, { h: 'ゆ', k: 'ユ', r: 'yu', cat: 'seion' }, { h: 'よ', k: 'ヨ', r: 'yo', cat: 'seion' },
+    { h: 'ら', k: 'ラ', r: 'ra', cat: 'seion' }, { h: 'り', k: 'リ', r: 'ri', cat: 'seion' }, { h: 'る', k: 'ル', r: 'ru', cat: 'seion' }, { h: 'れ', k: 'レ', r: 're', cat: 'seion' }, { h: 'ろ', k: 'ロ', r: 'ro', cat: 'seion' },
+    { h: 'わ', k: 'ワ', r: 'wa', cat: 'seion' }, { h: 'を', k: 'ヲ', r: 'wo', cat: 'seion' }, { h: 'ん', k: 'ン', r: 'n', cat: 'seion' },
+    { h: 'が', k: 'ガ', r: 'ga', cat: 'dakuon' }, { h: 'ぎ', k: 'ギ', r: 'gi', cat: 'dakuon' }, { h: 'ぐ', k: 'グ', r: 'gu', cat: 'dakuon' }, { h: 'げ', k: 'ゲ', r: 'ge', cat: 'dakuon' }, { h: 'ご', k: 'ゴ', r: 'go', cat: 'dakuon' },
+    { h: 'ざ', k: 'ザ', r: 'za', cat: 'dakuon' }, { h: 'じ', k: 'ジ', r: 'ji', cat: 'dakuon' }, { h: 'ず', k: 'ズ', r: 'zu', cat: 'dakuon' }, { h: 'ぜ', k: 'ゼ', r: 'ze', cat: 'dakuon' }, { h: 'ぞ', k: 'ゾ', r: 'zo', cat: 'dakuon' },
+    { h: 'だ', k: 'ダ', r: 'da', cat: 'dakuon' }, { h: 'ぢ', k: 'ヂ', r: 'ji', cat: 'dakuon' }, { h: 'づ', k: 'ヅ', r: 'zu', cat: 'dakuon' }, { h: 'で', k: 'デ', r: 'de', cat: 'dakuon' }, { h: 'ど', k: 'ド', r: 'do', cat: 'dakuon' },
+    { h: 'ば', k: 'バ', r: 'ba', cat: 'dakuon' }, { h: 'び', k: 'ビ', r: 'bi', cat: 'dakuon' }, { h: 'ぶ', k: 'ブ', r: 'bu', cat: 'dakuon' }, { h: 'べ', k: 'ベ', r: 'be', cat: 'dakuon' }, { h: 'ぼ', k: 'ボ', r: 'bo', cat: 'dakuon' },
+    { h: 'ぱ', k: 'パ', r: 'pa', cat: 'handakuon' }, { h: 'ぴ', k: 'ピ', r: 'pi', cat: 'handakuon' }, { h: 'ぷ', k: 'プ', r: 'pu', cat: 'handakuon' }, { h: 'ぺ', k: 'ペ', r: 'pe', cat: 'handakuon' }, { h: 'ぽ', k: 'ポ', r: 'po', cat: 'handakuon' },
+    { h: 'きゃ', k: 'キャ', r: 'kya', cat: 'yoon' }, { h: 'きゅ', k: 'キュ', r: 'kyu', cat: 'yoon' }, { h: 'きょ', k: 'キョ', r: 'kyo', cat: 'yoon' },
+    { h: 'りゃ', k: 'リャ', r: 'rya', cat: 'yoon' }, { h: 'りゅ', k: 'リュ', r: 'ryu', cat: 'yoon' }, { h: 'りょ', k: 'リョ', r: 'ryo', cat: 'yoon' },
+    { h: 'っ', k: 'ッ', r: 'tsu', cat: 'other' }, { h: 'ー', k: 'ー', r: '-', cat: 'other' }
+];
+
+const ZHUYIN_BY_KANA = {
+    'あ': 'ㄚ', 'い': 'ㄧ', 'う': 'ㄨ', 'え': 'ㄝ', 'お': 'ㄛ',
+    'か': 'ㄎㄚ', 'き': 'ㄎㄧ', 'く': 'ㄎㄨ', 'け': 'ㄎㄝ', 'こ': 'ㄎㄛ',
+    'さ': 'ㄙㄚ', 'し': 'ㄒㄧ', 'す': 'ㄙㄨ', 'せ': 'ㄙㄝ', 'そ': 'ㄙㄛ',
+    'た': 'ㄊㄚ', 'ち': 'ㄑㄧ', 'つ': 'ㄘㄨ', 'て': 'ㄊㄝ', 'と': 'ㄊㄛ',
+    'な': 'ㄋㄚ', 'に': 'ㄋㄧ', 'ぬ': 'ㄋㄨ', 'ね': 'ㄋㄝ', 'の': 'ㄋㄛ',
+    'は': 'ㄏㄚ', 'ひ': 'ㄏㄧ', 'ふ': 'ㄈㄨ', 'へ': 'ㄏㄝ', 'ほ': 'ㄏㄛ',
+    'ま': 'ㄇㄚ', 'み': 'ㄇㄧ', 'む': 'ㄇㄨ', 'め': 'ㄇㄝ', 'も': 'ㄇㄛ',
+    'や': 'ㄧㄚ', 'ゆ': 'ㄧㄨ', 'よ': 'ㄧㄛ',
+    'ら': 'ㄌㄚ', 'り': 'ㄌㄧ', 'る': 'ㄌㄨ', 'れ': 'ㄌㄝ', 'ろ': 'ㄌㄛ',
+    'わ': 'ㄨㄚ', 'を': 'ㄛ', 'ん': 'ㄣ',
+    'が': 'ㄍㄚ', 'ぎ': 'ㄍㄧ', 'ぐ': 'ㄍㄨ', 'げ': 'ㄍㄝ', 'ご': 'ㄍㄛ',
+    'ざ': 'ㄗㄚ', 'じ': 'ㄐㄧ', 'ず': 'ㄗㄨ', 'ぜ': 'ㄗㄝ', 'ぞ': 'ㄗㄛ',
+    'だ': 'ㄉㄚ', 'ぢ': 'ㄐㄧ', 'づ': 'ㄗㄨ', 'で': 'ㄉㄝ', 'ど': 'ㄉㄛ',
+    'ば': 'ㄅㄚ', 'び': 'ㄅㄧ', 'ぶ': 'ㄅㄨ', 'べ': 'ㄅㄝ', 'ぼ': 'ㄅㄛ',
+    'ぱ': 'ㄆㄚ', 'ぴ': 'ㄆㄧ', 'ぷ': 'ㄆㄨ', 'ぺ': 'ㄆㄝ', 'ぽ': 'ㄆㄛ',
+    'きゃ': 'ㄎㄧㄚ', 'きゅ': 'ㄎㄧㄨ', 'きょ': 'ㄎㄧㄛ',
+    'りゃ': 'ㄌㄧㄚ', 'りゅ': 'ㄌㄧㄨ', 'りょ': 'ㄌㄧㄛ',
+    'っ': '促音', 'ー': '長音'
+};
+
+let kanaDisplayMode = 'h';
+let kanaCategory = 'seion';
+let soundEnabled = localStorage.getItem('kanaSoundEnabled') !== 'false';
+
+function speak(text) {
+    if (!soundEnabled) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.8;
+    window.speechSynthesis.speak(utterance);
+}
+
+function getKanaSubText(item) {
+    const zhuyin = ZHUYIN_BY_KANA[item.h];
+    return zhuyin ? `${item.r} / ${zhuyin}` : item.r;
+}
+
+function renderKanaCell(item) {
+    return `<div class="kana-cell" onclick="speak('${item.h}')"><div class="kana-main">${kanaDisplayMode==='h' ? item.h : item.k}</div><div class="kana-sub">${getKanaSubText(item)}</div></div>`;
+}
+
+function renderKanaReference() {
+    const container = document.getElementById('app-container');
+    const seionGrid = [
+        ['あ','い','う','え','お'], ['か','き','く','け','こ'], ['さ','し','す','せ','そ'],
+        ['た','ち','つ','て','と'], ['な','に','ぬ','ね','の'], ['は','ひ','ふ','へ','ほ'],
+        ['ま','み','む','め','も'], ['や', null,'ゆ', null,'よ'], ['ら','り','る','れ','ろ'],
+        ['わ', null, null, null,'を'], [null, null, null, null,'ん']
+    ];
+    let gridHtml = '';
+    let gridClass = 'kana-grid-5';
+
+    if (kanaCategory === 'seion') {
+        seionGrid.forEach(row => {
+            row.forEach(char => {
+                if (!char) {
+                    gridHtml += '<div class="kana-cell kana-empty"></div>';
+                    return;
+                }
+                const item = KANA_DB.find(entry => entry.h === char);
+                gridHtml += renderKanaCell(item);
+            });
+        });
+    } else {
+        if (kanaCategory === 'dakuon_all') {
+            const dakuonHtml = KANA_DB.filter(item => item.cat === 'dakuon').map(renderKanaCell).join('');
+            const handakuonHtml = KANA_DB.filter(item => item.cat === 'handakuon').map(renderKanaCell).join('');
+            gridHtml = `
+                <div class="kana-section-title">濁音</div>
+                <div class="kana-grid-5">${dakuonHtml}</div>
+                <div class="kana-section-title">半濁音</div>
+                <div class="kana-grid-5">${handakuonHtml}</div>
+            `;
+            gridClass = '';
+        } else {
+            let filtered = KANA_DB.filter(item => item.cat === kanaCategory);
+            if (kanaCategory === 'yoon') gridClass = 'kana-grid-3';
+            gridHtml = filtered.map(renderKanaCell).join('');
+        }
+    }
+
+    container.innerHTML = `
+        <div class="mode-switch">
+            <div class="mode-btn ${kanaDisplayMode==='h'?'active':''}" onclick="setKanaMode('h')">平假名 (あ)</div>
+            <div class="mode-btn ${kanaDisplayMode==='k'?'active':''}" onclick="setKanaMode('k')">片假名 (ア)</div>
+        </div>
+        <div class="kana-toolbar">
+            <div class="kana-nav">
+                <button class="kana-nav-btn ${kanaCategory==='seion'?'active':''}" onclick="setKanaCat('seion')">清音</button>
+                <button class="kana-nav-btn ${kanaCategory==='dakuon_all'?'active':''}" onclick="setKanaCat('dakuon_all')">濁音/半濁音</button>
+                <button class="kana-nav-btn ${kanaCategory==='yoon'?'active':''}" onclick="setKanaCat('yoon')">拗音</button>
+                <button class="kana-nav-btn ${kanaCategory==='other'?'active':''}" onclick="setKanaCat('other')">其他</button>
+            </div>
+            <button class="btn sound-toggle ${soundEnabled ? '' : 'off'}" aria-pressed="${soundEnabled}" onclick="toggleKanaSound()">
+                ${soundEnabled ? '🔊 開' : '🔇 關'}
+            </button>
+        </div>
+        <div class="${gridClass}">${gridHtml}</div>
+        <div style="height:20px;"></div>
+    `;
+}
+
+function setKanaMode(mode) {
+    kanaDisplayMode = mode;
+    renderKanaReference();
+}
+
+function setKanaCat(category) {
+    kanaCategory = category;
+    renderKanaReference();
+}
+
+function toggleKanaSound() {
+    soundEnabled = !soundEnabled;
+    if (!soundEnabled) window.speechSynthesis.cancel();
+    localStorage.setItem('kanaSoundEnabled', String(soundEnabled));
+    renderKanaReference();
+}
+
+renderKanaReference();
+</script>
+</body>
+</html>
