@@ -159,6 +159,109 @@
         .order-item.marked { background-color: var(--mark-color) !important; border-color: var(--mark-border) !important; transform: scale(0.95); }
         .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
         .choice-btn { height: 80px; font-size: 1.5rem; background: white; border: 2px solid #eee; border-radius: 10px; }
+        #app-container.quiz-no-scroll {
+            overflow: hidden;
+            padding: 12px 16px calc(88px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            flex-direction: column;
+        }
+        .quiz-play-card {
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 0;
+            padding: clamp(12px, 2.4dvh, 18px);
+            display: flex;
+            flex-direction: column;
+        }
+        .quiz-exit-btn {
+            align-self: flex-start;
+            width: auto;
+            margin: 0;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+        }
+        .quiz-prompt {
+            flex: 1;
+            min-height: 108px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(3.35rem, 15dvh, 5rem);
+            line-height: 1;
+            font-weight: 800;
+        }
+        .quiz-prompt.audio-prompt {
+            min-height: 96px;
+            font-size: clamp(3rem, 13dvh, 4.5rem);
+            cursor: pointer;
+        }
+        .choice-grid.quiz-choices {
+            flex: 0 0 auto;
+            gap: clamp(8px, 1.5dvh, 12px);
+            margin-top: 0;
+        }
+        .choice-grid.quiz-choices .choice-btn {
+            height: clamp(58px, 10.5dvh, 76px);
+            font-size: clamp(1.12rem, 4.3vw, 1.45rem);
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        .quiz-input-area {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 9px;
+        }
+        .quiz-input-label {
+            margin: 0;
+            color: #777;
+            font-size: 0.95rem;
+        }
+        .quiz-text-input {
+            width: min(100%, 260px);
+            height: 44px;
+            padding: 8px 10px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.25rem;
+        }
+        .quiz-submit-btn {
+            width: min(100%, 260px);
+            margin-top: 0;
+            padding: 10px;
+        }
+        .quiz-feedback {
+            height: 20px;
+            font-weight: bold;
+            line-height: 20px;
+        }
+        @media (max-height: 760px) {
+            #app-container.quiz-no-scroll {
+                padding-top: 8px;
+                padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+            }
+            .quiz-play-card { padding: 10px; }
+            .quiz-prompt {
+                min-height: 86px;
+                font-size: clamp(3rem, 13dvh, 4.4rem);
+            }
+            .quiz-prompt.audio-prompt {
+                min-height: 78px;
+                font-size: clamp(2.8rem, 12dvh, 4rem);
+            }
+            .choice-grid.quiz-choices .choice-btn {
+                height: clamp(52px, 9.5dvh, 68px);
+            }
+            .quiz-text-input { height: 40px; }
+            .quiz-submit-btn { padding: 9px; }
+        }
+        @media (max-width: 380px) {
+            #app-container.quiz-no-scroll { padding-left: 12px; padding-right: 12px; }
+            .choice-grid.quiz-choices .choice-btn { font-size: 1.08rem; }
+        }
         .mistake-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 15px 0; }
         .mistake-tag { background: #ffebee; color: #c0392b; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; border: 1px solid #ef9a9a; }
         .correct-anim { background-color: var(--correct) !important; color: white; border-color: var(--correct); }
@@ -374,8 +477,8 @@ function configItem(key, label) {
 
 function getConfigGroups() {
     return [
-        { id: 'h_seion', label: '平假名', keys: SEION_KEYS.map(key => 'h_' + key) },
-        { id: 'k_seion', label: '片假名', keys: SEION_KEYS.map(key => 'k_' + key) },
+        { id: 'h_seion', label: '平假名(清音)', keys: SEION_KEYS.map(key => 'h_' + key) },
+        { id: 'k_seion', label: '片假名(清音)', keys: SEION_KEYS.map(key => 'k_' + key) },
         { id: 'h_other', label: '平假名(進階)', keys: OTHER_KEYS.map(key => 'h_' + key) },
         { id: 'k_other', label: '片假名(進階)', keys: OTHER_KEYS.map(key => 'k_' + key) }
     ];
@@ -452,8 +555,16 @@ function getConfiguredPool() {
     return pool;
 }
 
+function setAppContainerMode(mode = 'scroll') {
+    const container = document.getElementById('app-container');
+    container.classList.toggle('quiz-no-scroll', mode === 'quiz');
+    container.scrollTop = 0;
+    return container;
+}
+
 function renderGameMenu() {
-    document.getElementById('app-container').innerHTML = `
+    const container = setAppContainerMode();
+    container.innerHTML = `
         <h3 style="text-align:center; margin-bottom:20px;">選擇遊戲模式</h3>
         <div class="game-menu-grid">
             <div class="card game-btn" onclick="initGame('mcq')" style="background:#e1f5fe; color:#0277bd;"><div class="game-icon">👀</div>四選一</div>
@@ -470,7 +581,8 @@ function initGame(mode) {
 }
 
 function renderOrderModeSelect() {
-    document.getElementById('app-container').innerHTML = `
+    const container = setAppContainerMode();
+    container.innerHTML = `
         <div class="card" style="text-align:center; margin-top:20px;">
             <h2>🔢 順序挑戰</h2>
             <p>請選擇範圍開始計時！</p>
@@ -504,7 +616,8 @@ function getHighscores() {
 }
 
 function renderLeaderboardHome() {
-    document.getElementById('app-container').innerHTML = `
+    const container = setAppContainerMode();
+    container.innerHTML = `
         <div class="card">
             <h2>🏆 榮譽榜</h2>
             <p>請選擇要查看的榜單</p>
@@ -517,6 +630,7 @@ function renderLeaderboardHome() {
 }
 
 function renderLeaderboardView(mode, range) {
+    const container = setAppContainerMode();
     orderModeType = mode;
     orderRange = range;
     const scores = getHighscores();
@@ -526,7 +640,7 @@ function renderLeaderboardView(mode, range) {
         return `<tr><td class="${rankClass}">#${index + 1}</td><td style="font-weight:500;">${score.name}</td><td style="text-align:right;">${score.time}s</td></tr>`;
     }).join('');
     if (scores.length === 0) rows = '<tr><td colspan="3" style="text-align:center; padding:20px;">暫無紀錄，快來挑戰！</td></tr>';
-    document.getElementById('app-container').innerHTML = `<div class="card"><h3>🏆 ${title}</h3><table class="rank-table"><thead><tr><th width="15%">名次</th><th>玩家</th><th style="text-align:right;">時間</th></tr></thead><tbody>${rows}</tbody></table><button class="btn" style="margin-top:20px;" onclick="renderLeaderboardHome()">返回榜單列表</button></div>`;
+    container.innerHTML = `<div class="card"><h3>🏆 ${title}</h3><table class="rank-table"><thead><tr><th width="15%">名次</th><th>玩家</th><th style="text-align:right;">時間</th></tr></thead><tbody>${rows}</tbody></table><button class="btn" style="margin-top:20px;" onclick="renderLeaderboardHome()">返回榜單列表</button></div>`;
 }
 
 function startOrderGame(type, range) {
@@ -566,7 +680,7 @@ function endPress() {
 }
 
 function renderOrderGame(displayList, isRetry = false) {
-    const container = document.getElementById('app-container');
+    const container = setAppContainerMode();
     const target = orderGameList[orderCurrentIndex];
     if (!target) {
         finalTime = ((Date.now() - gameStartTime) / 1000).toFixed(2);
@@ -655,7 +769,7 @@ function submitScore() {
 function nextQuestion() {
     const pool = getConfiguredPool();
     if (pool.length === 0) {
-        document.getElementById('app-container').innerHTML = `<div class="card" style="text-align:center; padding:30px;"><h2>⚠️ 範圍為空</h2><p>請到右上角 ⚙️ 設定勾選測驗內容</p><button class="btn" onclick="toggleConfigModal()">開啟設定</button><button class="btn btn-outline" onclick="renderGameMenu()">回選單</button></div>`;
+        setAppContainerMode().innerHTML = `<div class="card" style="text-align:center; padding:30px;"><h2>⚠️ 範圍為空</h2><p>請到右上角 ⚙️ 設定勾選測驗內容</p><button class="btn" onclick="toggleConfigModal()">開啟設定</button><button class="btn btn-outline" onclick="renderGameMenu()">回選單</button></div>`;
         return;
     }
     const target = pool[Math.floor(Math.random() * pool.length)];
@@ -669,7 +783,12 @@ function nextQuestion() {
 
 function renderMCQ(pool) {
     const options = getOptions(pool);
-    document.getElementById('app-container').innerHTML = `<div class="card"><button class="btn btn-outline" style="width:auto;float:left;" onclick="renderGameMenu()">退出</button><div style="clear:both;"></div><div style="font-size:5rem;font-weight:bold;margin:20px 0;">${currentQuestion.display}</div><div class="choice-grid">${shuffle(options).map(option => `<button class="choice-btn" onclick="checkMCQ(this,'${option.r}')">${option.r}</button>`).join('')}</div></div>`;
+    setAppContainerMode('quiz').innerHTML = `
+        <div class="card quiz-play-card">
+            <button class="btn btn-outline quiz-exit-btn" onclick="renderGameMenu()">退出</button>
+            <div class="quiz-prompt">${currentQuestion.display}</div>
+            <div class="choice-grid quiz-choices">${shuffle(options).map(option => `<button class="choice-btn" onclick="checkMCQ(this,'${option.r}')">${option.r}</button>`).join('')}</div>
+        </div>`;
 }
 
 function checkMCQ(button, answer) {
@@ -684,7 +803,12 @@ function checkMCQ(button, answer) {
 
 function renderAudio(pool) {
     const options = getOptions(pool);
-    document.getElementById('app-container').innerHTML = `<div class="card"><button class="btn btn-outline" style="width:auto;float:left;" onclick="renderGameMenu()">退出</button><div style="clear:both;margin-bottom:20px;"></div><div style="font-size:4rem;cursor:pointer;" onclick="speak('${currentQuestion.h}')">🔊</div><div class="choice-grid">${shuffle(options).map(option => `<button class="choice-btn" onclick="checkAudio(this,'${option.r}')">${option.displayMode==='h'?option.h:option.k}</button>`).join('')}</div></div>`;
+    setAppContainerMode('quiz').innerHTML = `
+        <div class="card quiz-play-card">
+            <button class="btn btn-outline quiz-exit-btn" onclick="renderGameMenu()">退出</button>
+            <div class="quiz-prompt audio-prompt" onclick="speak('${currentQuestion.h}')">🔊</div>
+            <div class="choice-grid quiz-choices">${shuffle(options).map(option => `<button class="choice-btn" onclick="checkAudio(this,'${option.r}')">${option.displayMode==='h'?option.h:option.k}</button>`).join('')}</div>
+        </div>`;
     setTimeout(() => speak(currentQuestion.h), 300);
 }
 
@@ -698,8 +822,20 @@ function checkAudio(button, answer) {
 }
 
 function renderInput() {
-    document.getElementById('app-container').innerHTML = `<div class="card"><button class="btn btn-outline" style="width:auto;float:left;" onclick="renderGameMenu()">退出</button><div style="clear:both;"></div><div style="font-size:5rem;font-weight:bold;margin:20px 0;">${currentQuestion.display}</div><p>輸入羅馬拼音</p><input type="text" id="user-input" style="font-size:1.5rem;padding:10px;width:80%;text-align:center;border:2px solid #ddd;border-radius:10px;" autocomplete="off"><button class="btn" onclick="checkInput()">送出</button><div id="feedback-msg" style="height:20px;font-weight:bold;"></div></div>`;
-    setTimeout(() => document.getElementById('user-input').focus(), 100);
+    setAppContainerMode('quiz').innerHTML = `
+        <div class="card quiz-play-card">
+            <button class="btn btn-outline quiz-exit-btn" onclick="renderGameMenu()">退出</button>
+            <div class="quiz-prompt">${currentQuestion.display}</div>
+            <div class="quiz-input-area">
+                <p class="quiz-input-label">輸入羅馬拼音</p>
+                <input type="text" id="user-input" class="quiz-text-input" autocomplete="off">
+                <button class="btn quiz-submit-btn" onclick="checkInput()">送出</button>
+                <div id="feedback-msg" class="quiz-feedback"></div>
+            </div>
+        </div>`;
+    if (window.matchMedia('(min-width: 700px)').matches) {
+        setTimeout(() => document.getElementById('user-input').focus(), 100);
+    }
 }
 
 function checkInput() {

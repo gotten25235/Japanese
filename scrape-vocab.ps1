@@ -1,6 +1,8 @@
 param(
     [string]$OutJson = "vocab.json",
-    [string]$OutJs = "vocab-data.js"
+    [string]$OutJs = "vocab-data.js",
+    [string]$ZhCache = "vocab-zh-cache.json",
+    [switch]$SkipZhTranslation
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +26,121 @@ function Get-PageHtml {
     }
     finally {
         $client.Dispose()
+    }
+}
+
+function Get-JsonFromUrl {
+    param([string]$Url)
+
+    $client = New-Object System.Net.WebClient
+    try {
+        $client.Headers.Add("User-Agent", $script:UserAgent)
+        $bytes = $client.DownloadData($Url)
+        $json = [System.Text.Encoding]::UTF8.GetString($bytes)
+        return $json | ConvertFrom-Json
+    }
+    finally {
+        $client.Dispose()
+    }
+}
+
+function Load-ZhCache {
+    param([string]$Path)
+
+    $fullPath = Join-Path (Get-Location) $Path
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        return @{}
+    }
+
+    $raw = Get-Content -Raw -Encoding UTF8 -LiteralPath $fullPath
+    if (-not $raw.Trim()) {
+        return @{}
+    }
+
+    $object = $raw | ConvertFrom-Json
+    $cache = @{}
+    foreach ($property in $object.PSObject.Properties) {
+        $cache[$property.Name] = [string]$property.Value
+    }
+    return $cache
+}
+
+function Save-ZhCache {
+    param(
+        [hashtable]$Cache,
+        [string]$Path
+    )
+
+    $ordered = [ordered]@{}
+    foreach ($key in ($Cache.Keys | Sort-Object)) {
+        $ordered[$key] = $Cache[$key]
+    }
+    $json = $ordered | ConvertTo-Json -Depth 4
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location) $Path), $json, $utf8NoBom)
+}
+
+function Translate-ToTraditionalChinese {
+    param([string]$Text)
+
+    if (-not $Text) {
+        return ""
+    }
+
+    $encoded = [System.Uri]::EscapeDataString($Text)
+    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=$encoded"
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        try {
+            $response = Get-JsonFromUrl -Url $url
+            return [string]$response[0][0][0]
+        } catch {
+            if ($attempt -eq 4) {
+                Write-Warning "Failed zh translation after retries: $Text"
+                return $Text
+            }
+            Start-Sleep -Milliseconds (500 * $attempt)
+        }
+    }
+}
+
+function Add-ZhTranslations {
+    param(
+        [System.Collections.Generic.List[object]]$Items,
+        [string]$CachePath
+    )
+
+    $cache = Load-ZhCache -Path $CachePath
+    $total = $Items.Count
+    $index = 0
+    $changed = $false
+
+    foreach ($item in $Items) {
+        $index++
+        $english = [string]$item.meaning
+        if (-not $english) {
+            $zh = ""
+        } elseif ($cache.ContainsKey($english)) {
+            $zh = $cache[$english]
+        } else {
+            Write-Host "Translating zh $index/${total}: $english"
+            $zh = Translate-ToTraditionalChinese -Text $english
+            $cache[$english] = $zh
+            $changed = $true
+            if (($index % 10) -eq 0) {
+                Save-ZhCache -Cache $cache -Path $CachePath
+            }
+            Start-Sleep -Milliseconds 80
+        }
+
+        if ($item.PSObject.Properties.Name -contains "zh") {
+            $item.zh = $zh
+        } else {
+            $item | Add-Member -NotePropertyName "zh" -NotePropertyValue $zh
+        }
+    }
+
+    if ($changed) {
+        Save-ZhCache -Cache $cache -Path $CachePath
     }
 }
 
@@ -155,9 +272,14 @@ foreach ($source in $sources) {
     Write-Host "Parsed $($levelRows.Count) rows for $($source.Level)"
 }
 
+if (-not $SkipZhTranslation) {
+    Add-ZhTranslations -Items $all -CachePath $ZhCache
+}
+
+$sourceName = if ($SkipZhTranslation) { "JLPTsensei Vocabulary Lists" } else { "JLPTsensei Vocabulary Lists + Google Translate zh-TW" }
 $payload = [ordered]@{
     source = [ordered]@{
-        name = "JLPTsensei Vocabulary Lists"
+        name = $sourceName
         url = "https://jlptsensei.com/"
         fetchedAt = (Get-Date).ToString("s")
     }

@@ -216,6 +216,8 @@
         .level-filter .btn { flex:1; min-width:0; margin:0; }
         .vocab-card { display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:left; }
         .vocab-info { min-width:0; }
+        .vocab-meaning-zh { color: var(--primary); font-weight: 700; line-height: 1.35; }
+        .vocab-meaning-en { color: #999; font-size: 0.82rem; line-height: 1.35; margin-top: 2px; }
         .vocab-speak { width:auto; flex:0 0 auto; padding:5px 15px; margin:0; }
     </style>
 </head>
@@ -285,7 +287,8 @@ function renderVocab() {
                 <div class="vocab-info">
                     <div style="font-weight:bold; font-size:1.2rem;">${item.jp}</div>
                     <div style="color:#888;">${item.kana}</div>
-                    <div style="color:var(--primary);">${item.zh || item.meaning || item.en || ''}</div>
+                    <div class="vocab-meaning-zh">${item.zh || item.meaning || item.en || ''}</div>
+                    ${item.meaning && item.zh ? `<div class="vocab-meaning-en">${item.meaning}</div>` : ''}
                 </div>
                 <button class="btn vocab-speak" onclick="speak('${item.jp}')">🔊</button>
             </div>
