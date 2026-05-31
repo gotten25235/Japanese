@@ -421,6 +421,8 @@ let gameStartTime = 0;
 let finalTime = 0;
 let pressTimer = null;
 let isLongPress = false;
+let markedOrderKeys = new Set();
+const LONG_PRESS_HINT_DELAY_MS = 1600;
 
 function speak(text) {
     window.speechSynthesis.cancel();
@@ -647,6 +649,7 @@ function startOrderGame(type, range) {
     orderModeType = type;
     orderRange = range;
     wrongItems = [];
+    markedOrderKeys.clear();
     if (range === 'seion') orderGameList = KANA_DB.filter(item => item.cat === 'seion');
     else orderGameList = KANA_DB.filter(item => item.cat === 'dakuon' || item.cat === 'handakuon');
     orderCurrentIndex = 0;
@@ -659,20 +662,33 @@ function reshuffleBoard() {
     renderOrderGame(shuffle([...remaining]));
 }
 
+function orderItemKey(item) {
+    const index = KANA_DB.indexOf(item);
+    if (index >= 0) return String(index);
+    return [item.cat, item.r, item.h, item.k].join('|');
+}
+
 function startRetryGame() {
     orderGameList = [...wrongItems].sort((a, b) => KANA_DB.indexOf(a) - KANA_DB.indexOf(b));
     wrongItems = [];
+    markedOrderKeys.clear();
     orderCurrentIndex = 0;
     renderOrderGame(shuffle([...orderGameList]), true);
 }
 
 function startPress(button) {
     isLongPress = false;
+    clearTimeout(pressTimer);
     pressTimer = setTimeout(() => {
         isLongPress = true;
-        button.classList.toggle('marked');
+        const key = button.dataset.orderKey;
+        const marked = button.classList.toggle('marked');
+        if (key) {
+            if (marked) markedOrderKeys.add(key);
+            else markedOrderKeys.delete(key);
+        }
         if (navigator.vibrate) navigator.vibrate(50);
-    }, 600);
+    }, LONG_PRESS_HINT_DELAY_MS);
 }
 
 function endPress() {
@@ -711,8 +727,10 @@ function renderOrderGame(displayList, isRetry = false) {
     const gridHtml = displayList.map(item => {
         const listIndex = orderGameList.indexOf(item);
         const isClicked = listIndex < orderCurrentIndex;
+        const orderKey = orderItemKey(item);
+        const isMarked = markedOrderKeys.has(orderKey);
         return `
-            <div class="order-item ${isClicked ? 'hidden' : ''}"
+            <div class="order-item ${isClicked ? 'hidden' : ''} ${isMarked ? 'marked' : ''}" data-order-key="${orderKey}"
                  onmousedown="startPress(this)" ontouchstart="startPress(this)" onmouseup="endPress()" ontouchend="endPress()" onmouseleave="endPress()"
                  onclick="checkOrder(this, '${item.r}')" oncontextmenu="return false;">
                  ${orderModeType==='h'?item.h:item.k}
@@ -741,6 +759,8 @@ function checkOrder(button, value) {
     }
     const target = orderGameList[orderCurrentIndex];
     if (value === target.r) {
+        markedOrderKeys.delete(orderItemKey(target));
+        if (button.dataset.orderKey) markedOrderKeys.delete(button.dataset.orderKey);
         button.style.background = '#2ecc71';
         button.style.color = 'white';
         speak(orderModeType === 'h' ? target.h : target.k);
